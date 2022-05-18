@@ -12,16 +12,13 @@ dm_env = dm_tasks._DemoTasksProcessEnv(
         num_action_repeats=1)
 gym_env = GymFromDMEnv(dm_env)
 
-model = PPO("MlpPolicy", gym_env, verbose=1)
-model.learn(total_timesteps=5000000)
-model.save("100W.pkl")
 
 obs = gym_env.reset()
-for i in range(1000):
-    action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, info = gym_env.step(action)
-    # gym_env.render()
+done = False
+while not done:
+    obs, reward, done, info = gym_env.step(3)
     if done:
-      obs = gym_env.reset()
+        break
+#       obs = gym_env.reset()
 
 gym_env.close()

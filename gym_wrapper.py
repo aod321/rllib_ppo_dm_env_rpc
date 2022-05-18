@@ -15,6 +15,7 @@
 # ============================================================================
 """bsuite adapter for OpenAI gym run-loops."""
 
+from tkinter import Image
 from typing import Any, Dict, Optional, Tuple, Union
 
 import dm_env
@@ -22,6 +23,7 @@ from dm_env import specs
 import gym
 from gym import spaces
 import numpy as np
+from PIL import Image, ImageOps
 
 # OpenAI gym step format = obs, reward, is_finished, other_info
 _GymTimestep = Tuple[np.ndarray, float, bool, Dict[str, Any]]
@@ -51,12 +53,12 @@ class GymFromDMEnv(gym.Env):
       return spaces.Box(
           low=float(obs_spec.minimum),
           high=float(obs_spec.maximum),
-          shape=obs_spec.shape,
+          shape=(84,84,3),
           dtype=obs_spec.dtype)
     return spaces.Box(
         low=-float('inf'),
         high=float('inf'),
-        shape=obs_spec.shape,
+        shape=(84,84,3),
         dtype=obs_spec.dtype)
 
   @property
@@ -67,18 +69,24 @@ class GymFromDMEnv(gym.Env):
     return -float('inf'), float('inf')
 
   def step(self, action: int) -> _GymTimestep:
-    timestep = self._env.step(action)
-    self._last_observation = timestep.observation
+    actions = {'paddle': [action],
+              'jump': [9]}
+    timestep = self._env.step(actions)
+    image_obs = timestep.observation['Camera']
+    image_obs = np.array(ImageOps.flip(Image.frombuffer(mode='RGBA', data=timestep.observation['Camera'],size=(84, 84))).convert('RGB'))
+    self._last_observation = image_obs
     reward = timestep.reward or 0.
     if timestep.last():
       self.game_over = True
-    return timestep.observation, reward, timestep.last(), {}
+    return image_obs, reward, timestep.observation['Collided'], {}
 
   def reset(self) -> np.ndarray:
     self.game_over = False
     timestep = self._env.reset()
-    self._last_observation = timestep.observation
-    return timestep.observation
+    image_obs = timestep.observation['Camera']
+    image_obs = np.array(ImageOps.flip(Image.frombuffer(mode='RGBA', data=timestep.observation['Camera'],size=(84,84))).convert('RGB'))
+    self._last_observation = image_obs
+    return image_obs
 
   def render(self, mode: str = 'rgb_array') -> Union[np.ndarray, bool]:
     if self._last_observation is None:
@@ -95,6 +103,9 @@ class GymFromDMEnv(gym.Env):
         self.viewer = rendering.SimpleImageViewer()
       self.viewer.imshow(self._last_observation)
       return self.viewer.isopen
+
+  def close(self) -> None:
+      self._env.close()
 
 
   def __getattr__(self, attr):
