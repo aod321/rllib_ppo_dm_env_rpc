@@ -1,10 +1,10 @@
 import gym
-from bsuite.utils.gym_wrapper import GymFromDMEnv
 from stable_baselines3 import PPO
 import _load_environment as dm_tasks
-
+from gym_wrapper import GymFromDMEnv
 
 _TASK_OBSERVATIONS = ['Camera', 'reward', 'Collided']
+      
 PORT = 30051
 
 dm_env = dm_tasks._DemoTasksProcessEnv(
